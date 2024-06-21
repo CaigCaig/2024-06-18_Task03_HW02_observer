@@ -6,144 +6,144 @@ using namespace std;
 
 typedef enum
 {
-    WARNING,
-    ERROR,
-    FATAL_ERROR
+	WARNING,
+	ERROR,
+	FATAL_ERROR
 } MESSAGE_t;
 
 class Observer {
 public:
-    virtual void onWarning(const MESSAGE_t curr_msg_t, const string& message) {}
-    virtual void onError(const MESSAGE_t curr_msg_t, const string& message) {}
-    virtual void onFatalError(const MESSAGE_t curr_msg_t, const string& message) {}
-    virtual void setPath(const string& path_) {}
+	virtual void onWarning(const string& message) {}
+	virtual void onError(const string& message) {}
+	virtual void onFatalError(const string& message) {}
+	virtual void setPath(const string& path_) {}
 };
 
 class Warning : public Observer
 {
 public:
-    Warning() {};
-    void onWarning(const MESSAGE_t curr_msg_t, const string& message) override
-    {
-        if (curr_msg_t == WARNING)
-        {
-            cout << message << endl;
-        }
-    }
+	Warning() {};
+	void onWarning(const string& message) override
+	{
+		cout << message << endl;
+	}
 };
 
 class Error : public Observer
 {
 private:
-    string path;
+	string path;
 public:
-    Error() {};
-    void onError(const MESSAGE_t curr_msg_t, const string& message) override
-    {
-        if (curr_msg_t == ERROR)
-        {
-            std::ofstream fout{ this->path, ios::app };      // открываем файл для записи
-            if (fout.is_open())
-            {
-                fout << "Error: " << message << endl;
-            }
-            fout.close();
-        }
-    }
-    void setPath(const string& path_)
-    {
-        path = path_;
-    }
+	Error() {};
+	void onError(const string& message) override
+	{
+		std::ofstream fout{ this->path, ios::app };      // открываем файл для записи
+		if (fout.is_open())
+		{
+			fout << "Error: " << message << endl;
+		}
+		fout.close();
+	}
+	void setPath(const string& path_)
+	{
+		path = path_;
+	}
 };
 
 class FatalError : public Observer
 {
 private:
-    string path;
+	string path;
 public:
-    FatalError() {};
-    void onFatalError(const MESSAGE_t curr_msg_t, const string& message) override
-    {
-        if (curr_msg_t == FATAL_ERROR)
-        {
-            cout << message << endl;
-            std::ofstream fout{ this->path, ios::app };      // открываем файл для записи
-            if (fout.is_open())
-            {
-                fout << "FatalError: " << message << endl;
-            }
-            fout.close();
-        }
-    }
-    void setPath(const string& path_)
-    {
-        path = path_;
-    }
+	FatalError() {};
+	void onFatalError(const string& message) override
+	{
+		cout << message << endl;
+		std::ofstream fout{ this->path, ios::app };      // открываем файл для записи
+		if (fout.is_open())
+		{
+			fout << "FatalError: " << message << endl;
+		}
+		fout.close();
+	}
+	void setPath(const string& path_)
+	{
+		path = path_;
+	}
 };
 
 class Observed {
 private:
-    MESSAGE_t curr_message_t;
-    string message;
-    vector<Observer*> observers;
+	MESSAGE_t curr_message_t;
+	string message;
+	vector<Observer*> observers;
 public:
-    void AddObserver(Observer* obs)
-    {
-        observers.push_back(obs);
-    }
-    void RemoveObserver(Observer* obs)
-    {
-        auto it = remove(observers.begin(), observers.end(), obs);
-        observers.erase(it, observers.end());
-    }
-    void NotifyObervers()
-    {
-        for (auto it : observers)
-        {
-            it->onWarning(curr_message_t, message);
-            it->onError(curr_message_t, message);
-            it->onFatalError(curr_message_t, message);
-        }
-    }
-    void SendMessage(const MESSAGE_t curr_msg_t, const string& msg)
-    {
-        curr_message_t = curr_msg_t;
-        message = msg;
-        NotifyObervers();
-    }
-    void SetPath(const string& path_)
-    {
-        for (auto it : observers)
-        {
-            it->setPath(path_);
-        }
-    }
+	void AddObserver(Observer* obs)
+	{
+		observers.push_back(obs);
+	}
+	void RemoveObserver(Observer* obs)
+	{
+		auto it = remove(observers.begin(), observers.end(), obs);
+		observers.erase(it, observers.end());
+	}
+	void NotifyObervers()
+	{
+		for (auto it : observers)
+		{
+			switch (curr_message_t)
+			{
+			case WARNING:
+				it->onWarning(message);
+				break;
+			case ERROR:
+				it->onError(message);
+				break;
+			case FATAL_ERROR:
+				it->onFatalError(message);
+				break;
+			}
+		}
+	}
+	void SendMessage(const MESSAGE_t curr_msg_t, const string& msg)
+	{
+		curr_message_t = curr_msg_t;
+		message = msg;
+		NotifyObervers();
+	}
+	void SetPath(const string& path_)
+	{
+		for (auto it : observers)
+		{
+			it->setPath(path_);
+		}
+	}
 };
 
 
 int main()
 {
-    Observed observed;
-    Warning warning;
-    Error error;
-    FatalError fatal_error;
+	Observed observed;
+	Warning warning;
+	Error error;
+	FatalError fatal_error;
 
-    observed.AddObserver(&warning);
-    observed.AddObserver(&error);
-    observed.AddObserver(&fatal_error);
-    observed.SetPath("errors.log");
+	observed.AddObserver(&warning);
+	observed.AddObserver(&error);
+	observed.AddObserver(&fatal_error);
+	observed.SetPath("errors.log");
 
-    observed.SendMessage(WARNING, "Some warning 1");
-    observed.SendMessage(ERROR, "Some error 1");
-    observed.SendMessage(FATAL_ERROR, "Some fatal_error 1");
+	observed.SendMessage(WARNING, "Some warning 1");
+	observed.SendMessage(ERROR, "Some error 1");
+	observed.SendMessage(FATAL_ERROR, "Some fatal_error 1");
 
-    observed.RemoveObserver(&warning);
+	observed.RemoveObserver(&warning);
 
-    observed.SendMessage(WARNING, "Some warning 2");
-    observed.SendMessage(ERROR, "Some error 2");
-    observed.SendMessage(FATAL_ERROR, "Some fatal_error 2");
+	observed.SendMessage(WARNING, "Some warning 2");
+	observed.SendMessage(ERROR, "Some error 2");
+	observed.SendMessage(FATAL_ERROR, "Some fatal_error 2");
 
-    system("pause");
+	system("pause");
 }
 
 /*
@@ -165,9 +165,9 @@ void fatalError(const std::string& message) const;
 Далее нужно реализовать небольшую иерархию классов-наблюдателей, реализующих интерфейс:
 class Observer {
 public:
-    virtual void onWarning(const std::string& message) {}
-    virtual void onError(const std::string& message) {}
-    virtual void onFatalError(const std::string& message) {}
+	virtual void onWarning(const std::string& message) {}
+	virtual void onError(const std::string& message) {}
+	virtual void onFatalError(const std::string& message) {}
 };
 В иерархии классов-наблюдателей нужно реализовать:
 
